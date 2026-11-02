@@ -1,6 +1,6 @@
 import { beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { criarProcessador } from '../src/processador.js';
+import { criarProcessador, telefoneCanonico } from '../src/processador.js';
 import { criarRegistro } from '../src/registro.js';
 import { ErroWhatsApp } from '../src/whatsapp.js';
 
@@ -100,6 +100,19 @@ test('com lista de permitidos, só envia para os números da lista', async () =>
   const liberado = await restrito(evento({ clienteTelefone: '5548999990000' }, 'ev-2'));
   assert.equal(liberado.acao, 'enviado');
   assert.equal(enviadas[0].para, '5548999990000');
+});
+
+test('lista de permitidos reconhece o mesmo celular com e sem o 9', async () => {
+  const restrito = criarProcessador({
+    provedor: { nome: 'teste', enviar: async (m) => { enviadas.push(m); return { id: 'x' }; } },
+    registro,
+    statusNotificaveis: ['PRONTO_PARA_ENTREGA'],
+    permitidos: ['5548999990000'],
+    logger: silencioso,
+  });
+  assert.equal((await restrito(evento({ clienteTelefone: '554899990000' }))).acao, 'enviado');
+  assert.equal(telefoneCanonico('554899990000'), '5548999990000');
+  assert.equal(telefoneCanonico('554832221111'), '554832221111', 'fixo não muda');
 });
 
 test('registro filtra por placa', async () => {

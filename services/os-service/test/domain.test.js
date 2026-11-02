@@ -23,6 +23,9 @@ test('normaliza telefone brasileiro para E.164 sem +', () => {
   assert.equal(normalizarTelefone('1132654321'), '551132654321');
   assert.equal(normalizarTelefone('+55 11 98765-4321'), '5511987654321');
   assert.equal(normalizarTelefone('12345'), null);
+  assert.equal(normalizarTelefone('(48) 9162-4394'), '5548991624394', 'celular sem o 9 recebe o 9');
+  assert.equal(normalizarTelefone('554891624394'), '5548991624394');
+  assert.equal(normalizarTelefone('(48) 3222-1111'), '554832221111', 'fixo não recebe o 9');
   assert.equal(normalizarTelefone(undefined), null);
 });
 
