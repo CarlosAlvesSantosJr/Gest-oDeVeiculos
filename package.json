@@ -1,0 +1,16 @@
+{
+  "name": "gestao-de-veiculos-oficina",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gestão de serviços de veículos em oficina mecânica: painel em tempo real, app do gerente e avisos por WhatsApp",
+  "scripts": {
+    "install:all": "npm ci --prefix services/os-service && npm ci --prefix services/notification-service",
+    "test": "npm test --prefix services/os-service && npm test --prefix services/notification-service",
+    "test:e2e": "node --test --test-reporter=spec \"tests/e2e/**/*.test.mjs\"",
+    "up": "docker compose up -d --build",
+    "down": "docker compose down"
+  },
+  "engines": {
+    "node": ">=22.13"
+  }
+}

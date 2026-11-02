@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel da Oficina</title>
+  <link rel="icon" href="/assets/icone.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/base.css">
+  <style>
+    body { min-height: 100vh; display: flex; flex-direction: column; }
+    header {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 14px 24px; background: var(--bg-2); border-bottom: 1px solid var(--card-borda);
+    }
+    .marca { display: flex; align-items: center; gap: 12px; }
+    .marca img { width: 38px; height: 38px; }
+    .marca h1 { margin: 0; font-size: 22px; letter-spacing: -.01em; }
+    .marca small { display: block; color: var(--texto-2); font-size: 13px; font-weight: 400; }
+    .cabecalho-dir { display: flex; align-items: center; gap: 22px; }
+    #relogio { font-variant-numeric: tabular-nums; font-size: 28px; font-weight: 600; }
+    #data { color: var(--texto-2); font-size: 13px; text-align: right; }
+
+    .resumo { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; padding: 18px 24px 0; }
+    .kpi {
+      background: var(--card); border: 1px solid var(--card-borda); border-radius: var(--raio);
+      padding: 12px 16px; border-top: 4px solid var(--cor, var(--texto-2));
+    }
+    .kpi span { color: var(--texto-2); font-size: 13px; }
+    .kpi strong { display: block; font-size: 34px; font-variant-numeric: tabular-nums; line-height: 1.15; }
+
+    main {
+      flex: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px;
+      padding: 18px 24px 24px; min-height: 0;
+    }
+    .coluna {
+      background: var(--bg-2); border: 1px solid var(--card-borda); border-radius: var(--raio);
+      display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+    }
+    .coluna h2 {
+      margin: 0; padding: 12px 16px; font-size: 16px; display: flex; align-items: center; gap: 8px;
+      background: color-mix(in srgb, var(--cor) 16%, transparent); border-bottom: 3px solid var(--cor);
+    }
+    .coluna h2 .qtd {
+      margin-left: auto; background: var(--cor); color: #111; border-radius: 999px;
+      min-width: 28px; text-align: center; padding: 2px 8px; font-size: 14px;
+    }
+    .lista { padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+    .vazio { color: var(--texto-2); text-align: center; padding: 28px 8px; font-size: 14px; }
+
+    .card {
+      background: var(--card); border: 1px solid var(--card-borda); border-left: 5px solid var(--cor);
+      border-radius: 12px; padding: 12px 14px; display: grid; gap: 6px;
+    }
+    .card-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .veiculo { font-size: 18px; font-weight: 700; line-height: 1.2; }
+    .veiculo small { display: block; font-weight: 400; font-size: 13px; color: var(--texto-2); }
+    .servico { font-size: 13px; color: var(--texto-2); margin: 0; }
+    .rodape { display: flex; justify-content: space-between; font-size: 12px; color: var(--texto-2); }
+    .tempo { font-variant-numeric: tabular-nums; }
+    [data-status="PRONTO_PARA_ENTREGA"] .card .tempo { color: var(--pronto); font-weight: 600; }
+
+    footer { padding: 0 24px 14px; color: var(--texto-2); font-size: 12px; display: flex; justify-content: space-between; }
+
+    @media (max-width: 1100px) {
+      main { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .resumo { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 640px) {
+      header { padding: 12px 16px; }
+      .resumo, main { padding-left: 16px; padding-right: 16px; }
+      main { grid-template-columns: 1fr; }
+      .resumo { grid-template-columns: repeat(2, 1fr); }
+      #relogio { font-size: 20px; }
+      footer { padding: 0 16px 14px; flex-direction: column; gap: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="marca">
+      <img src="/assets/icone.svg" alt="">
+      <h1><span id="nome-oficina">Oficina</span><small>Painel de controle dos serviços</small></h1>
+    </div>
+    <div class="cabecalho-dir">
+      <span id="conexao" class="conexao">Conectando…</span>
+      <div><div id="relogio">--:--</div><div id="data"></div></div>
+    </div>
+  </header>
+
+  <section class="resumo" id="resumo" aria-label="Resumo"></section>
+  <main id="quadro" aria-live="polite"></main>
+  <footer>
+    <span>Atualização em tempo real · gerente opera pelo celular em <strong id="url-gerente">/gerente</strong></span>
+    <span id="atualizado"></span>
+  </footer>
+
+  <script type="module">
+    import { STATUS, assinarEventos, esc, placaHTML, tempoDesde } from '/assets/comum.js';
+
+    const ordens = new Map();
+    const destacar = new Set();
+    const $ = (id) => document.getElementById(id);
+    $('url-gerente').textContent = `${location.origin}/gerente`;
+
+    function renderizar() {
+      const lista = [...ordens.values()];
+      const porStatus = Object.fromEntries(STATUS.map((s) => [s.codigo, []]));
+      for (const o of lista) porStatus[o.status]?.push(o);
+      for (const grupo of Object.values(porStatus)) grupo.sort((a, b) => a.atualizadoEm.localeCompare(b.atualizadoEm));
+
+      $('resumo').innerHTML = `<div class="kpi"><span>Veículos na oficina</span><strong>${lista.length}</strong></div>`
+        + STATUS.map((s) => `<div class="kpi" data-status="${s.codigo}"><span>${s.rotulo}</span>
+          <strong>${porStatus[s.codigo].length}</strong></div>`).join('');
+
+      $('quadro').innerHTML = STATUS.map((s) => `
+        <section class="coluna" data-status="${s.codigo}">
+          <h2><span aria-hidden="true">${s.icone}</span>${s.rotulo}<span class="qtd">${porStatus[s.codigo].length}</span></h2>
+          <div class="lista">
+            ${porStatus[s.codigo].map(card).join('') || '<div class="vazio">Nenhum veículo</div>'}
+          </div>
+        </section>`).join('');
+
+      destacar.clear();
+      $('atualizado').textContent = `Atualizado às ${new Date().toLocaleTimeString('pt-BR')}`;
+    }
+
+    function card(o) {
+      return `<article class="card ${destacar.has(o.id) ? 'destaque' : ''}">
+        <div class="card-topo">
+          <div class="veiculo">${esc(o.marca)} ${esc(o.modelo)}<small>${esc(o.cor)}${o.cor ? ' · ' : ''}${esc(o.clienteNome)}</small></div>
+          ${placaHTML(o.placa)}
+        </div>
+        ${o.servico ? `<p class="servico">${esc(o.servico)}</p>` : ''}
+        <div class="rodape"><span>Neste status</span><span class="tempo">${tempoDesde(o.atualizadoEm)}</span></div>
+      </article>`;
+    }
+
+    async function carregar() {
+      try {
+        const painel = await (await fetch('/api/painel')).json();
+        ordens.clear();
+        for (const o of painel.ordens) ordens.set(o.id, o);
+        renderizar();
+      } catch (e) {
+        console.error('Falha ao carregar painel', e);
+      }
+    }
+
+    assinarEventos({
+      aoConectar() { $('conexao').textContent = 'Ao vivo'; $('conexao').classList.add('on'); carregar(); },
+      aoDesconectar() { $('conexao').textContent = 'Reconectando…'; $('conexao').classList.remove('on'); },
+      aoMudar(tipo, dados) {
+        const ordem = tipo === 'criada' ? dados : dados.ordem;
+        if (ordem.status === 'ENTREGUE') ordens.delete(ordem.id);
+        else { ordens.set(ordem.id, ordem); destacar.add(ordem.id); }
+        renderizar();
+      },
+    });
+
+    function relogio() {
+      const agora = new Date();
+      $('relogio').textContent = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      $('data').textContent = agora.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+    }
+    relogio();
+    setInterval(relogio, 1000 * 15);
+    setInterval(renderizar, 60 * 1000);   // atualiza "há X min"
+    setInterval(carregar, 5 * 60 * 1000); // ressincroniza por segurança
+    carregar();
+  </script>
+</body>
+</html>

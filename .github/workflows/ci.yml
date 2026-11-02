@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  testes-unitarios:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        servico: [os-service, notification-service]
+    defaults:
+      run:
+        working-directory: services/${{ matrix.servico }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: services/${{ matrix.servico }}/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  teste-e2e-docker:
+    needs: testes-unitarios
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Sobe a stack
+        run: docker compose up -d --build --wait
+      - name: Testes ponta a ponta
+        run: npm run test:e2e
+        env:
+          BASE_URL: http://localhost:8080
+      - name: Logs em caso de falha
+        if: failure()
+        run: docker compose logs
+      - name: Derruba a stack
+        if: always()
+        run: docker compose down -v

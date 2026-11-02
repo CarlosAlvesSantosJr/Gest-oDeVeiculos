@@ -1,0 +1,73 @@
+:root {
+  --bg: #0f1419;
+  --bg-2: #161d25;
+  --card: #1d2631;
+  --card-borda: #2a3644;
+  --texto: #e8edf2;
+  --texto-2: #9aa8b6;
+  --orcamento: #f5b83d;
+  --peca: #f0743e;
+  --andamento: #4c9bf5;
+  --pronto: #35c777;
+  --perigo: #ef5350;
+  --raio: 14px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--texto);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; cursor: pointer; }
+
+[data-status="AGUARDANDO_ORCAMENTO"] { --cor: var(--orcamento); }
+[data-status="AGUARDANDO_PECA"] { --cor: var(--peca); }
+[data-status="EM_ANDAMENTO"] { --cor: var(--andamento); }
+[data-status="PRONTO_PARA_ENTREGA"] { --cor: var(--pronto); }
+
+/* Placa no padrão Mercosul */
+.placa {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  background: #fff;
+  color: #111;
+  border: 2px solid #222;
+  border-radius: 6px;
+  overflow: hidden;
+  min-width: 118px;
+  flex: none;
+  white-space: nowrap;
+  font-family: 'Roboto Mono', ui-monospace, Consolas, monospace;
+  box-shadow: 0 1px 0 rgba(0,0,0,.4);
+}
+.placa-faixa {
+  background: #1a3f9a;
+  color: #fff;
+  font: 700 9px/1 system-ui, sans-serif;
+  letter-spacing: .25em;
+  text-align: center;
+  padding: 3px 0 2px;
+}
+.placa-num {
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: .06em;
+  text-align: center;
+  padding: 2px 10px 3px;
+}
+
+.conexao { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--texto-2); }
+.conexao::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--perigo); }
+.conexao.on::before { background: var(--pronto); box-shadow: 0 0 0 4px rgba(53,199,119,.18); }
+
+@keyframes destaque {
+  0% { box-shadow: 0 0 0 0 var(--cor); transform: scale(1.02); }
+  100% { box-shadow: 0 0 0 14px transparent; transform: scale(1); }
+}
+.destaque { animation: destaque 1.2s ease-out 2; }
+@media (prefers-reduced-motion: reduce) { .destaque { animation: none; outline: 2px solid var(--cor); } }

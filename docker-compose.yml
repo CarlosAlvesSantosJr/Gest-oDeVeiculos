@@ -1,0 +1,70 @@
+name: gestao-oficina
+
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-oficina}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-oficina123}
+    ports:
+      - "15672:15672" # console de administração
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  os-service:
+    build:
+      context: ./services/os-service
+      target: runtime
+    environment:
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-oficina}:${RABBITMQ_PASS:-oficina123}@rabbitmq:5672
+      MANAGER_TOKEN: ${MANAGER_TOKEN:-gerente123}
+      SEED_DEMO: ${SEED_DEMO:-true}
+    volumes:
+      - os-data:/data
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  notification-service:
+    build:
+      context: ./services/notification-service
+      target: runtime
+    environment:
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-oficina}:${RABBITMQ_PASS:-oficina123}@rabbitmq:5672
+      NOTIFICAR_STATUS: ${NOTIFICAR_STATUS:-PRONTO_PARA_ENTREGA}
+      OFICINA_NOME: ${OFICINA_NOME:-Oficina Mecânica}
+      OFICINA_HORARIO: ${OFICINA_HORARIO:-de segunda a sexta, das 8h às 18h}
+      WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-mock}
+      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_TEMPLATE_NAME: ${WHATSAPP_TEMPLATE_NAME:-}
+      WHATSAPP_TEMPLATE_LANG: ${WHATSAPP_TEMPLATE_LANG:-pt_BR}
+    volumes:
+      - notification-data:/data
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    depends_on:
+      - os-service
+      - notification-service
+    restart: unless-stopped
+
+volumes:
+  os-data:
+  notification-data:
+  rabbitmq-data:
