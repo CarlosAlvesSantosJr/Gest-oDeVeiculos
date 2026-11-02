@@ -145,6 +145,53 @@ export function criarRepositorio(caminho = ':memory:', { agora = () => new Date(
     });
   }
 
+  const COLUNAS_EDITAVEIS = {
+    placa: 'placa',
+    marca: 'marca',
+    modelo: 'modelo',
+    cor: 'cor',
+    clienteNome: 'cliente_nome',
+    clienteTelefone: 'cliente_telefone',
+    servico: 'servico',
+  };
+  const ROTULOS_CAMPOS = {
+    placa: 'placa', marca: 'marca', modelo: 'modelo', cor: 'cor',
+    clienteNome: 'nome do cliente', clienteTelefone: 'telefone', servico: 'serviço',
+  };
+
+  function editar(id, dados) {
+    return transacao(() => {
+      const atual = buscar(id);
+      if (atual.status === STATUS.ENTREGUE) {
+        throw new ConflictError('Ordem de serviço já foi entregue e não pode ser editada');
+      }
+      const alterados = Object.keys(dados).filter((c) => c in COLUNAS_EDITAVEIS && dados[c] !== atual[c]);
+      if (!alterados.length) return { ordem: atual, alterados };
+
+      if (alterados.includes('placa')) {
+        const outra = stmt.ativaPorPlaca.get(dados.placa);
+        if (outra && outra.id !== id) {
+          throw new ConflictError(`Já existe uma ordem de serviço ativa para a placa ${dados.placa}`);
+        }
+      }
+
+      const quando = agora().toISOString();
+      const sets = alterados.map((c) => `${COLUNAS_EDITAVEIS[c]} = ?`).join(', ');
+      db.prepare(`UPDATE ordens SET ${sets}, atualizado_em = ? WHERE id = ?`)
+        .run(...alterados.map((c) => dados[c]), quando, id);
+      stmt.inserirHistorico.run(id, atual.status, atual.status,
+        `Dados alterados: ${alterados.map((c) => ROTULOS_CAMPOS[c]).join(', ')}`, quando);
+      const ordem = buscar(id);
+      enfileirarEvento('OS_DADOS_ALTERADOS', 'os.dados.alterados', {
+        osId: id,
+        camposAlterados: alterados,
+        antes: Object.fromEntries(alterados.map((c) => [c, atual[c]])),
+        depois: Object.fromEntries(alterados.map((c) => [c, ordem[c]])),
+      }, quando);
+      return { ordem, alterados };
+    });
+  }
+
   function listar({ incluirEntregues = false } = {}) {
     const linhas = incluirEntregues ? stmt.listarTodas.all() : stmt.listarAtivas.all();
     return linhas.map(mapearOrdem);
@@ -173,6 +220,7 @@ export function criarRepositorio(caminho = ':memory:', { agora = () => new Date(
     criar,
     buscar,
     atualizarStatus,
+    editar,
     listar,
     historico,
     outboxPendentes,

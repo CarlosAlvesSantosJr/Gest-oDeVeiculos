@@ -39,7 +39,7 @@ services:
     environment:
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-oficina}:${RABBITMQ_PASS:-oficina123}@rabbitmq:5672
       NOTIFICAR_STATUS: ${NOTIFICAR_STATUS:-PRONTO_PARA_ENTREGA}
-      OFICINA_NOME: ${OFICINA_NOME:-Oficina Mecânica}
+      OFICINA_NOME: ${OFICINA_NOME:-Mecânica Auto Marcas}
       OFICINA_HORARIO: ${OFICINA_HORARIO:-de segunda a sexta, das 8h às 18h}
       WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-mock}
       WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}

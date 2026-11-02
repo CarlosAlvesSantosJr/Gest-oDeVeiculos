@@ -3,6 +3,7 @@ import { dirname } from 'node:path';
 import { criarApp } from './app.js';
 import { criarPublicadorRabbit } from './broker.js';
 import { validarNovaOS } from './domain.js';
+import { normalizarCadastrosAtivos } from './normalizacao.js';
 import { criarRelayOutbox } from './outbox.js';
 import { criarRepositorio } from './repository.js';
 import { VEICULOS_DEMO } from './seed.js';
@@ -28,6 +29,9 @@ if (config.seedDemo && repo.listar({ incluirEntregues: true }).length === 0) {
   for (const veiculo of VEICULOS_DEMO) repo.criar(validarNovaOS(veiculo));
   console.info(`[os-service] ${VEICULOS_DEMO.length} veículos de demonstração cadastrados`);
 }
+
+const corrigidos = normalizarCadastrosAtivos(repo);
+if (corrigidos) console.info(`[os-service] ${corrigidos} cadastro(s) ajustado(s) para iniciais maiúsculas`);
 
 const hub = criarHubSSE();
 const publicador = criarPublicadorRabbit({ url: config.rabbitUrl, exchange: config.exchange });

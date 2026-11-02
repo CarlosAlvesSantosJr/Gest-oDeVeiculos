@@ -19,13 +19,19 @@ flowchart LR
         UC5((Consultar histórico<br/>da OS))
         UC6((Notificar cliente:<br/>veículo pronto))
         UC7((Autenticar gerente))
+        UC8((Editar dados<br/>do veículo))
+        UC9((Padronizar nomes<br/>próprios))
     end
 
     G --> UC1
     G --> UC2
     G --> UC3
     G --> UC5
+    G --> UC8
     M --> UC4
+    UC8 -. include .-> UC7
+    UC1 -. include .-> UC9
+    UC8 -. include .-> UC9
     UC1 -. include .-> UC7
     UC2 -. include .-> UC7
     UC3 -. include .-> UC7
@@ -50,6 +56,7 @@ classDiagram
         +DateTime criadoEm
         +DateTime atualizadoEm
         +alterarStatus(novo: StatusOS, observacao: String) EventoStatusAlterado
+        +editar(dados: Partial~OrdemServico~) EventoDadosAlterados
     }
 
     class Cliente {

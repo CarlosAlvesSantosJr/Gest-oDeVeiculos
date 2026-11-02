@@ -3,23 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#1a3f9a">
+  <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <title>Gerente da Oficina</title>
+  <title>Auto Marcas · Gerente</title>
   <link rel="manifest" href="/gerente/manifest.webmanifest">
-  <link rel="icon" href="/assets/icone.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/assets/icone.svg">
+  <link rel="icon" href="/assets/logo-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/logo-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,700;1,900&display=swap">
   <link rel="stylesheet" href="/assets/base.css">
   <style>
     body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
-    .topo {
-      position: sticky; top: 0; z-index: 5; background: var(--bg-2); border-bottom: 1px solid var(--card-borda);
-      padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
-    }
+    .topo { position: sticky; top: 0; z-index: 5; background: #000; }
+    .topo-conteudo { padding: calc(10px + env(safe-area-inset-top)) 16px 12px; }
     .topo-linha { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .topo h1 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px; }
-    .topo h1 img { width: 28px; height: 28px; }
+    .topo .marca-oficina { gap: 10px; }
+    .topo .marca-oficina img { width: 38px; height: 38px; }
+    .topo .marca-texto small { font-size: 10px; }
+    .topo .marca-texto b { font-size: 19px; }
+    .topo-acoes { display: flex; align-items: center; gap: 4px; }
     .sair { background: none; border: 0; color: var(--texto-2); font-size: 13px; padding: 6px; }
     .busca {
       width: 100%; margin-top: 10px; padding: 11px 14px; border-radius: 10px; border: 1px solid var(--card-borda);
@@ -31,7 +35,8 @@
       border-radius: 999px; padding: 7px 12px; font-size: 13px; display: flex; gap: 6px; align-items: center;
     }
     .chip b { font-variant-numeric: tabular-nums; }
-    .chip[aria-pressed="true"] { background: var(--cor, #e8edf2); color: #111; border-color: transparent; }
+    .chip[aria-pressed="true"] { background: var(--cor, var(--marca)); color: var(--cor-texto, #fff); border-color: transparent; }
+    .chip[data-status][aria-pressed="true"] { --cor-texto: #111; }
 
     .lista { padding: 12px 16px; display: grid; gap: 10px; }
     .item {
@@ -52,15 +57,15 @@
 
     .fab {
       position: fixed; right: 16px; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 6;
-      background: var(--pronto); color: #0b2416; border: 0; border-radius: 999px; padding: 15px 20px;
-      font-weight: 700; font-size: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.45);
+      background: var(--marca); color: #fff; border: 0; border-radius: 999px; padding: 15px 20px;
+      font-weight: 700; font-size: 16px; box-shadow: 0 8px 24px rgba(227,20,27,.35);
     }
 
     /* Folha inferior (bottom sheet) */
-    .fundo { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 10; display: none; }
+    .fundo { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 10; display: none; }
     .folha {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 11; background: var(--bg-2);
-      border-radius: 18px 18px 0 0; border-top: 1px solid var(--card-borda);
+      border-radius: 18px 18px 0 0; border-top: 3px solid var(--marca);
       padding: 10px 16px calc(18px + env(safe-area-inset-bottom)); max-height: 92vh; overflow-y: auto;
       transform: translateY(105%); transition: transform .22s ease;
     }
@@ -69,6 +74,19 @@
     .alca { width: 44px; height: 5px; border-radius: 3px; background: var(--card-borda); margin: 0 auto 12px; }
     .folha h2 { margin: 0 0 4px; font-size: 18px; }
     .folha .sub { color: var(--texto-2); font-size: 13px; margin: 0 0 14px; }
+    .folha-cabecalho { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .folha-cabecalho .sub { margin: 0; }
+
+    .abas {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; margin-bottom: 14px;
+      background: var(--card); border: 1px solid var(--card-borda); border-radius: 12px;
+    }
+    .aba {
+      border: 0; background: none; color: var(--texto-2); padding: 10px 6px; border-radius: 9px;
+      font-size: 14px; font-weight: 600;
+    }
+    .aba[aria-selected="true"] { background: var(--marca); color: #fff; }
+
     .botoes-status { display: grid; gap: 10px; }
     .btn-status {
       display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 600;
@@ -78,7 +96,16 @@
     .btn-status[aria-current="true"]::after { content: 'atual'; margin-left: auto; font-size: 12px; font-weight: 500; }
     .btn-status:disabled { opacity: .55; }
     .btn-entregar { width: 100%; margin-top: 14px; padding: 15px; border-radius: 12px; border: 1px dashed var(--texto-2); background: none; color: var(--texto); font-weight: 600; }
-    .aviso-wpp { font-size: 12px; color: var(--pronto); margin: 4px 0 0; }
+    .aviso-wpp { font-size: 12px; color: var(--pronto); margin: 8px 0 0; }
+
+    .linha-tempo { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--card-borda); display: grid; gap: 14px; }
+    .linha-tempo li { position: relative; font-size: 14px; }
+    .linha-tempo li::before {
+      content: ''; position: absolute; left: -21px; top: 4px; width: 12px; height: 12px; border-radius: 50%;
+      background: var(--cor, var(--texto-2)); border: 2px solid var(--bg-2);
+    }
+    .linha-tempo time { display: block; color: var(--texto-2); font-size: 12px; margin-bottom: 2px; }
+    .linha-tempo .obs { color: var(--texto-2); font-size: 13px; margin-top: 2px; }
 
     label { display: grid; gap: 6px; font-size: 13px; color: var(--texto-2); margin-bottom: 12px; min-width: 0; }
     input, textarea, select {
@@ -86,27 +113,29 @@
       font: inherit; font-size: 16px; color: var(--texto); background: var(--card);
       border: 1px solid var(--card-borda); border-radius: 10px; padding: 12px;
     }
-    input:focus, textarea:focus, select:focus, .busca:focus { outline: 2px solid var(--andamento); outline-offset: 1px; }
+    input:focus, textarea:focus, select:focus, .busca:focus { outline: 2px solid var(--marca); outline-offset: 1px; }
     .duas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .primario {
-      width: 100%; padding: 15px; border: 0; border-radius: 12px; background: var(--andamento); color: #fff;
+      width: 100%; padding: 15px; border: 0; border-radius: 12px; background: var(--marca); color: #fff;
       font-weight: 700; font-size: 16px;
     }
+    .primario:active { background: var(--marca-forte); }
     .primario:disabled { opacity: .6; }
+    .dica { font-size: 12px; color: var(--texto-2); margin: -4px 0 14px; }
 
-    #login { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+    #login { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; background: radial-gradient(circle at 50% 30%, #1d0405, var(--bg) 60%); }
     #login form {
       width: 100%; max-width: 360px; background: var(--bg-2); border: 1px solid var(--card-borda);
-      border-radius: 18px; padding: 24px;
+      border-top: 3px solid var(--marca); border-radius: 18px; padding: 24px;
     }
-    #login img { width: 56px; display: block; margin: 0 auto 10px; }
+    #login img { width: 132px; height: 132px; display: block; margin: 0 auto 12px; border-radius: 50%; }
     #login h1 { text-align: center; margin: 0 0 4px; font-size: 20px; }
     #login p { text-align: center; color: var(--texto-2); margin: 0 0 20px; font-size: 14px; }
     .erro { color: var(--perigo); font-size: 13px; min-height: 18px; margin: 0 0 8px; }
 
     .toast {
       position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translate(-50%, 20px);
-      background: #e8edf2; color: #111; padding: 12px 16px; border-radius: 10px; font-size: 14px; font-weight: 500;
+      background: #f4f4f5; color: #111; padding: 12px 16px; border-radius: 10px; font-size: 14px; font-weight: 500;
       opacity: 0; transition: .2s; z-index: 20; max-width: calc(100% - 32px); pointer-events: none;
     }
     .toast.ver { opacity: 1; transform: translate(-50%, 0); }
@@ -117,7 +146,7 @@
 <body>
   <section id="login" hidden>
     <form id="form-login">
-      <img src="/assets/icone.svg" alt="">
+      <img src="/assets/logo-512.png" alt="Mecânica Auto Marcas">
       <h1>Acesso do gerente</h1>
       <p>Informe o código de acesso da oficina</p>
       <label>Código de acesso
@@ -130,13 +159,18 @@
 
   <div id="app" hidden>
     <header class="topo">
-      <div class="topo-linha">
-        <h1><img src="/assets/icone.svg" alt="">Gerente</h1>
-        <span id="conexao" class="conexao">Conectando…</span>
-        <button class="sair" id="sair" type="button">Sair</button>
+      <div class="topo-conteudo">
+        <div class="topo-linha">
+          <span id="marca"></span>
+          <div class="topo-acoes">
+            <span id="conexao" class="conexao">Conectando…</span>
+            <button class="sair" id="sair" type="button">Sair</button>
+          </div>
+        </div>
+        <input class="busca" id="busca" type="search" placeholder="Buscar placa, modelo ou cliente" aria-label="Buscar">
+        <div class="filtros" id="filtros" role="group" aria-label="Filtrar por status"></div>
       </div>
-      <input class="busca" id="busca" type="search" placeholder="Buscar placa, modelo ou cliente" aria-label="Buscar">
-      <div class="filtros" id="filtros" role="group" aria-label="Filtrar por status"></div>
+      <div class="faixa-marca" aria-hidden="true"></div>
     </header>
     <main class="lista" id="lista" aria-live="polite"></main>
     <button class="fab" id="novo" type="button">＋ Novo veículo</button>
@@ -152,7 +186,10 @@
   <div class="toast" id="toast" role="status"></div>
 
   <script type="module">
-    import { STATUS, assinarEventos, esc, formatarPlaca, placaHTML, rotuloStatus, tempoDesde } from '/assets/comum.js';
+    import {
+      STATUS, assinarEventos, esc, formatarDataHora, formatarNomeProprio, formatarPlaca, formatarTelefone,
+      marcaHTML, placaHTML, rotuloStatus, tempoDesde,
+    } from '/assets/comum.js';
 
     const $ = (id) => document.getElementById(id);
     const CHAVE = 'oficina.tokenGerente';
@@ -160,6 +197,7 @@
     let filtro = '';
     let token = '';
     try { token = localStorage.getItem(CHAVE) || ''; } catch { /* armazenamento indisponível */ }
+    $('marca').innerHTML = marcaHTML();
 
     async function api(caminho, opcoes = {}) {
       const resp = await fetch(caminho, {
@@ -247,7 +285,7 @@
     $('busca').addEventListener('input', renderizarLista);
     $('lista').addEventListener('click', (e) => {
       const item = e.target.closest('[data-id]');
-      if (item) abrirStatus(item.dataset.id);
+      if (item) abrirVeiculo(item.dataset.id);
     });
 
     async function carregar() {
@@ -266,15 +304,61 @@
     document.querySelector('[data-fechar]').addEventListener('click', fecharFolha);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') fecharFolha(); });
 
-    function abrirStatus(id) {
+    // Corrige maiúsculas dos nomes próprios ao sair do campo (o servidor aplica a mesma regra).
+    function ativarFormatacaoNomes(form) {
+      form.addEventListener('focusout', (e) => {
+        const tipo = e.target.dataset?.nome;
+        if (tipo) e.target.value = formatarNomeProprio(e.target.value, { tipo });
+        if (e.target.name === 'placa') e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      });
+    }
+
+    function camposVeiculoHTML(o = {}) {
+      return `
+        <div class="duas">
+          <label>Placa<input name="placa" required maxlength="8" autocapitalize="characters" placeholder="ABC1D23" value="${esc(o.placa)}"></label>
+          <label>Cor<input name="cor" maxlength="30" data-nome="veiculo" placeholder="Prata" value="${esc(o.cor)}"></label>
+        </div>
+        <div class="duas">
+          <label>Marca<input name="marca" required maxlength="40" data-nome="veiculo" placeholder="Fiat" value="${esc(o.marca)}"></label>
+          <label>Modelo<input name="modelo" required maxlength="60" data-nome="veiculo" placeholder="Argo" value="${esc(o.modelo)}"></label>
+        </div>
+        <label>Nome do cliente<input name="clienteNome" required maxlength="80" autocomplete="off" autocapitalize="words"
+          data-nome="pessoa" value="${esc(o.clienteNome)}"></label>
+        <label>WhatsApp do cliente<input name="clienteTelefone" required type="tel" inputmode="tel" placeholder="(11) 98765-4321"
+          value="${esc(formatarTelefone(o.clienteTelefone))}"></label>
+        <label>Serviço<textarea name="servico" rows="2" maxlength="500" placeholder="Descreva o problema ou serviço">${esc(o.servico)}</textarea></label>`;
+    }
+
+    const ABAS = [
+      { id: 'status', rotulo: 'Status' },
+      { id: 'editar', rotulo: 'Editar' },
+      { id: 'historico', rotulo: 'Histórico' },
+    ];
+
+    function abrirVeiculo(id, aba = 'status') {
       const o = ordens.get(id);
-      if (!o) return;
+      if (!o) { fecharFolha(); return; }
       abrirFolha(`
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div class="folha-cabecalho">
           <div><h2 id="folha-titulo">${esc(o.marca)} ${esc(o.modelo)}</h2>
-          <p class="sub">${esc(o.clienteNome)}${o.servico ? ` · ${esc(o.servico)}` : ''}</p></div>
+          <p class="sub">${esc(o.clienteNome)}${o.cor ? ` · ${esc(o.cor)}` : ''}</p></div>
           ${placaHTML(o.placa)}
         </div>
+        <div class="abas" role="tablist">
+          ${ABAS.map((a) => `<button type="button" role="tab" class="aba" data-aba="${a.id}" aria-selected="${a.id === aba}">${a.rotulo}</button>`).join('')}
+        </div>
+        <div id="conteudo-aba" role="tabpanel"></div>`);
+      $('folha-conteudo').querySelector('.abas').addEventListener('click', (e) => {
+        const botao = e.target.closest('[data-aba]');
+        if (botao) abrirVeiculo(id, botao.dataset.aba);
+      });
+      ({ status: abaStatus, editar: abaEditar, historico: abaHistorico })[aba](o, $('conteudo-aba'));
+    }
+
+    function abaStatus(o, alvo) {
+      alvo.innerHTML = `
+        ${o.servico ? `<p class="sub">🔧 ${esc(o.servico)}</p>` : ''}
         <label>Observação (opcional)<input id="obs" maxlength="300" placeholder="Ex.: peça chega amanhã"></label>
         <div class="botoes-status">
           ${STATUS.map((s) => `<button type="button" class="btn-status" data-status="${s.codigo}" data-novo="${s.codigo}"
@@ -282,15 +366,14 @@
             <span aria-hidden="true">${s.icone}</span>${s.rotulo}</button>`).join('')}
         </div>
         <p class="aviso-wpp">✅ Ao marcar "Pronto para Entrega" o cliente recebe um WhatsApp automaticamente.</p>
-        ${o.status === 'PRONTO_PARA_ENTREGA' ? '<button type="button" class="btn-entregar" data-novo="ENTREGUE">🚗 Veículo entregue ao cliente (sai do painel)</button>' : ''}
-      `);
-      $('folha-conteudo').onclick = async (e) => {
+        ${o.status === 'PRONTO_PARA_ENTREGA' ? '<button type="button" class="btn-entregar" data-novo="ENTREGUE">🚗 Veículo entregue ao cliente (sai do painel)</button>' : ''}`;
+      alvo.addEventListener('click', async (e) => {
         const botao = e.target.closest('[data-novo]');
         if (!botao || botao.disabled) return;
         const novo = botao.dataset.novo;
-        $('folha-conteudo').querySelectorAll('button').forEach((b) => { b.disabled = true; });
+        alvo.querySelectorAll('button').forEach((b) => { b.disabled = true; });
         try {
-          const atualizada = await api(`/api/ordens/${id}/status`, {
+          const atualizada = await api(`/api/ordens/${o.id}/status`, {
             method: 'PATCH', body: JSON.stringify({ status: novo, observacao: $('obs').value }),
           });
           aplicar(atualizada);
@@ -300,9 +383,58 @@
             : `${formatarPlaca(o.placa)} → ${rotuloStatus(novo)}`);
         } catch (erro) {
           toast(erro.message, true);
-          abrirStatus(id);
+          abrirVeiculo(o.id, 'status');
         }
-      };
+      });
+    }
+
+    function abaEditar(o, alvo) {
+      alvo.innerHTML = `
+        <form id="form-editar" novalidate>
+          ${camposVeiculoHTML(o)}
+          <p class="dica">Nomes são ajustados automaticamente com iniciais maiúsculas.</p>
+          <button class="primario" type="submit">Salvar alterações</button>
+        </form>`;
+      const form = $('form-editar');
+      ativarFormatacaoNomes(form);
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const botao = form.querySelector('button[type=submit]');
+        botao.disabled = true;
+        try {
+          const { camposAlterados, ...editada } = await api(`/api/ordens/${o.id}`, {
+            method: 'PATCH', body: JSON.stringify(Object.fromEntries(new FormData(form))),
+          });
+          aplicar(editada);
+          if (camposAlterados.length) {
+            toast(`${formatarPlaca(editada.placa)}: dados atualizados`);
+            abrirVeiculo(o.id, 'status');
+          } else {
+            toast('Nenhuma alteração para salvar');
+            botao.disabled = false;
+          }
+        } catch (erro) {
+          toast(erro.message, true);
+          botao.disabled = false;
+        }
+      });
+    }
+
+    async function abaHistorico(o, alvo) {
+      alvo.innerHTML = '<p class="sub">Carregando…</p>';
+      try {
+        const { historico } = await api(`/api/ordens/${o.id}`);
+        alvo.innerHTML = `<ol class="linha-tempo">${[...historico].reverse().map((h) => {
+          const edicao = h.statusAnterior === h.statusNovo;
+          return `<li data-status="${edicao ? '' : h.statusNovo}">
+            <time>${formatarDataHora(h.ocorridoEm)}</time>
+            <strong>${edicao ? '✏️ Edição de dados' : esc(rotuloStatus(h.statusNovo))}</strong>
+            ${h.observacao ? `<div class="obs">${esc(h.observacao)}</div>` : ''}
+          </li>`;
+        }).join('')}</ol>`;
+      } catch (erro) {
+        alvo.innerHTML = `<p class="erro">${esc(erro.message)}</p>`;
+      }
     }
 
     $('novo').addEventListener('click', () => {
@@ -310,28 +442,20 @@
         <h2 id="folha-titulo">Entrada de veículo</h2>
         <p class="sub">Cadastre o veículo para aparecer no painel central</p>
         <form id="form-novo">
-          <div class="duas">
-            <label>Placa<input name="placa" required maxlength="8" autocapitalize="characters" placeholder="ABC1D23"></label>
-            <label>Cor<input name="cor" maxlength="30" placeholder="Prata"></label>
-          </div>
-          <div class="duas">
-            <label>Marca<input name="marca" required maxlength="40" placeholder="Fiat"></label>
-            <label>Modelo<input name="modelo" required maxlength="60" placeholder="Argo"></label>
-          </div>
-          <label>Nome do cliente<input name="clienteNome" required maxlength="80" autocomplete="off"></label>
-          <label>WhatsApp do cliente<input name="clienteTelefone" required type="tel" inputmode="tel" placeholder="(11) 98765-4321"></label>
-          <label>Serviço<textarea name="servico" rows="2" maxlength="500" placeholder="Descreva o problema ou serviço"></textarea></label>
+          ${camposVeiculoHTML()}
           <label>Status inicial
             <select name="status">${STATUS.map((s) => `<option value="${s.codigo}">${s.rotulo}</option>`).join('')}</select>
           </label>
           <button class="primario" type="submit">Cadastrar</button>
         </form>`);
-      $('form-novo').addEventListener('submit', async (e) => {
+      const form = $('form-novo');
+      ativarFormatacaoNomes(form);
+      form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const botao = e.target.querySelector('button[type=submit]');
+        const botao = form.querySelector('button[type=submit]');
         botao.disabled = true;
         try {
-          const criada = await api('/api/ordens', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(e.target))) });
+          const criada = await api('/api/ordens', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(form))) });
           aplicar(criada);
           fecharFolha();
           toast(`${formatarPlaca(criada.placa)} cadastrado no painel`);

@@ -123,6 +123,40 @@ test('PATCH status: 401 sem token, 404 OS inexistente, 409 transição inválida
   assert.equal((await mudarStatus(os.id, 'XPTO')).status, 400);
 });
 
+async function editar(id, corpo, headers = auth) {
+  return fetch(`${base}/api/ordens/${id}`, { method: 'PATCH', headers, body: JSON.stringify(corpo) });
+}
+
+test('POST /api/ordens devolve nomes com iniciais maiúsculas', async () => {
+  const os = await (await criar({ ...novaOS, clienteNome: 'bruno de souza', marca: 'FIAT', modelo: 'argo' })).json();
+  assert.equal(os.clienteNome, 'Bruno de Souza');
+  assert.equal(os.marca, 'Fiat');
+  assert.equal(os.modelo, 'Argo');
+});
+
+test('PATCH /api/ordens/:id edita dados do veículo', async () => {
+  const os = await (await criar()).json();
+  const resp = await editar(os.id, { modelo: 'argo trekking', cor: 'cinza', clienteTelefone: '21 99999-0000' });
+  assert.equal(resp.status, 200);
+  const editada = await resp.json();
+  assert.equal(editada.modelo, 'Argo Trekking');
+  assert.equal(editada.cor, 'Cinza');
+  assert.equal(editada.clienteTelefone, '5521999990000');
+  assert.deepEqual(editada.camposAlterados, ['modelo', 'cor', 'clienteTelefone']);
+  const detalhe = await (await fetch(`${base}/api/ordens/${os.id}`)).json();
+  assert.match(detalhe.historico.at(-1).observacao, /Dados alterados/);
+});
+
+test('PATCH /api/ordens/:id: 401 sem token, 400 inválido, 404 inexistente, 409 placa em uso', async () => {
+  const os = await (await criar()).json();
+  await criar({ ...novaOS, placa: 'ZZZ1A23' });
+  assert.equal((await editar(os.id, { cor: 'Azul' }, { 'Content-Type': 'application/json' })).status, 401);
+  assert.equal((await editar(os.id, { clienteNome: '123' })).status, 400);
+  assert.equal((await editar(os.id, { status: 'ENTREGUE' })).status, 400);
+  assert.equal((await editar('inexistente', { cor: 'Azul' })).status, 404);
+  assert.equal((await editar(os.id, { placa: 'ZZZ1A23' })).status, 409);
+});
+
 test('rota inexistente retorna 404 JSON', async () => {
   const resp = await fetch(`${base}/api/nada`);
   assert.equal(resp.status, 404);

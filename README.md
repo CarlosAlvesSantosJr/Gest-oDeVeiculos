@@ -1,13 +1,15 @@
-# 🔧 Gestão de Veículos – Oficina Mecânica
+<p align="center"><img src="frontend/assets/logo-192.png" width="120" alt="Mecânica Auto Marcas"></p>
 
-Controle dos serviços de veículos em uma oficina, com **painel central em tempo real**, **app do gerente
+# Mecânica Auto Marcas · Gestão de Veículos
+
+Controle dos serviços de veículos da **Mecânica Auto Marcas**, com **painel central em tempo real**, **app do gerente
 no celular** e **aviso automático por WhatsApp** quando o carro fica pronto.
 
 ![Painel central](docs/img/painel.png)
 
-| App do gerente (celular) | Troca de status com um toque |
+| App do gerente (celular) | Aba de edição do veículo |
 |---|---|
-| <img src="docs/img/gerente-lista.png" width="300"> | <img src="docs/img/gerente-status.png" width="300"> |
+| <img src="docs/img/gerente-lista.png" width="300"> | <img src="docs/img/gerente-editar.png" width="300"> |
 
 ## Funcionalidades
 
@@ -16,7 +18,11 @@ no celular** e **aviso automático por WhatsApp** quando o carro fica pronto.
   cliente, serviço e há quanto tempo o carro está naquele status.
 - **Atualização em tempo real** (Server-Sent Events): o que o gerente muda no celular aparece no painel na hora, com destaque visual.
 - **App do gerente** (`/gerente`, PWA instalável): login por código de acesso, busca por placa, filtros,
-  cadastro de entrada, troca de status, observações e registro de entrega.
+  cadastro de entrada, troca de status, observações e registro de entrega. Ao tocar em um veículo, abas
+  **Status**, **Editar** (placa, marca, modelo, cor, cliente, WhatsApp e serviço) e **Histórico**.
+- **Nomes padronizados**: nomes próprios recebem iniciais maiúsculas automaticamente, no formulário e no servidor
+  (`joão da silva` → `João da Silva`, `onix ltz` → `Onix LTZ`, `bmw` → `BMW`). Nome de cliente com números é recusado.
+- **Identidade visual** da Mecânica Auto Marcas (preto, branco e vermelho) no painel, no app e na mensagem do WhatsApp.
 - **WhatsApp automático**: ao marcar *Pronto para Entrega*, o cliente recebe uma mensagem pela
   **WhatsApp Business Cloud API** (Meta). Em desenvolvimento, o modo `mock` registra a mensagem sem enviar.
 - **Microsserviços + mensageria** com RabbitMQ, Transactional Outbox, idempotência, retentativa com backoff e DLQ.
@@ -73,7 +79,7 @@ No `.env`, configure `WHATSAPP_PROVIDER=cloud`, `WHATSAPP_TOKEN`, `WHATSAPP_PHON
 
 ```bash
 npm run install:all   # instala dependências dos dois serviços
-npm test              # 56 testes unitários/integração (domínio, repositório, outbox, API, SSE, WhatsApp, consumidor)
+npm test              # 71 testes unitários/integração (domínio, repositório, outbox, API, SSE, WhatsApp, consumidor)
 docker compose up -d --build
 npm run test:e2e      # teste ponta a ponta contra a stack no Docker (gateway → API → RabbitMQ → WhatsApp)
 ```

@@ -65,6 +65,46 @@ test('buscar OS inexistente lança NotFoundError', () => {
   assert.throws(() => repo.buscar('nao-existe'), NotFoundError);
 });
 
+test('editar altera só os campos diferentes, registra histórico e evento', () => {
+  const os = repo.criar(entrada());
+  const { ordem, alterados } = repo.editar(os.id, { modelo: 'Uno Mille', marca: 'Fiat', cor: 'Branco' });
+  assert.deepEqual(alterados, ['modelo', 'cor']);
+  assert.equal(ordem.modelo, 'Uno Mille');
+  assert.equal(ordem.status, os.status, 'edição não muda o status');
+  assert.equal(repo.historico(os.id).at(-1).observacao, 'Dados alterados: modelo, cor');
+  const evento = repo.outboxPendentes().at(-1);
+  assert.equal(evento.routingKey, 'os.dados.alterados');
+  assert.deepEqual(evento.evento.dados.antes, { modelo: 'Uno', cor: '' });
+});
+
+test('editar sem mudanças não gera histórico nem evento', () => {
+  const os = repo.criar(entrada());
+  const { alterados } = repo.editar(os.id, { marca: 'Fiat' });
+  assert.deepEqual(alterados, []);
+  assert.equal(repo.historico(os.id).length, 1);
+  assert.equal(repo.outboxPendentes().length, 1);
+});
+
+test('editar placa para uma placa já ativa em outra OS é bloqueado', () => {
+  const a = repo.criar(entrada());
+  repo.criar(entrada({ placa: 'XYZ9876' }));
+  assert.throws(() => repo.editar(a.id, { placa: 'XYZ9876' }), ConflictError);
+  assert.doesNotThrow(() => repo.editar(a.id, { placa: 'DEF5678' }));
+});
+
+test('OS entregue não pode ser editada', () => {
+  const os = repo.criar(entrada({ status: STATUS.PRONTO_PARA_ENTREGA }));
+  repo.atualizarStatus(os.id, STATUS.ENTREGUE);
+  assert.throws(() => repo.editar(os.id, { cor: 'Azul' }), ConflictError);
+});
+
+test('telefone editado é usado no próximo aviso de WhatsApp', () => {
+  const os = repo.criar(entrada());
+  repo.editar(os.id, { clienteTelefone: '5521999990000' });
+  const { evento } = repo.atualizarStatus(os.id, STATUS.PRONTO_PARA_ENTREGA);
+  assert.equal(evento.dados.clienteTelefone, '5521999990000');
+});
+
 test('marcarPublicado remove do outbox e registrarFalha incrementa tentativas', () => {
   repo.criar(entrada());
   const [p] = repo.outboxPendentes();

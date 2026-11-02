@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ConflictError, STATUS, ValidationError, normalizarPlaca, normalizarTelefone, placaValida,
-  validarNovaOS, validarTransicao,
+  formatarNomeProprio, validarEdicaoOS, validarNovaOS, validarTransicao,
 } from '../src/domain.js';
 
 const valido = {
@@ -59,4 +59,48 @@ test('transições inválidas', () => {
   assert.throws(() => validarTransicao(STATUS.EM_ANDAMENTO, STATUS.EM_ANDAMENTO), ConflictError);
   assert.throws(() => validarTransicao(STATUS.EM_ANDAMENTO, STATUS.ENTREGUE), ConflictError);
   assert.throws(() => validarTransicao(STATUS.ENTREGUE, STATUS.EM_ANDAMENTO), ConflictError);
+});
+
+test('formatarNomeProprio: nomes de pessoa com preposições minúsculas', () => {
+  assert.equal(formatarNomeProprio('joão da silva'), 'João da Silva');
+  assert.equal(formatarNomeProprio('ANA MARIA DOS SANTOS'), 'Ana Maria dos Santos');
+  assert.equal(formatarNomeProprio('  pedro   e   paulo  '), 'Pedro e Paulo');
+  assert.equal(formatarNomeProprio("maria-clara d'ávila"), "Maria-Clara D'Ávila");
+  assert.equal(formatarNomeProprio('Carlos McDonald'), 'Carlos McDonald', 'caixa mista intencional é preservada');
+  assert.equal(formatarNomeProprio('da silva'), 'Da Silva', 'primeira palavra sempre maiúscula');
+});
+
+test('formatarNomeProprio: dados do veículo preservam siglas, versões e números', () => {
+  const v = (s) => formatarNomeProprio(s, { tipo: 'veiculo' });
+  assert.equal(v('volkswagen'), 'Volkswagen');
+  assert.equal(v('bmw'), 'BMW');
+  assert.equal(v('mercedes-benz'), 'Mercedes-Benz');
+  assert.equal(v('onix ltz'), 'Onix LTZ');
+  assert.equal(v('hb20 vision'), 'HB20 Vision');
+  assert.equal(v('gol 1.6'), 'Gol 1.6');
+  assert.equal(v('Corolla XEi'), 'Corolla XEi');
+  assert.equal(v('azul marinho'), 'Azul Marinho');
+});
+
+test('validarNovaOS aplica a capitalização em cliente, marca, modelo e cor', () => {
+  const os = validarNovaOS({ ...valido, clienteNome: 'JOSÉ DE OLIVEIRA', marca: 'fiat', modelo: 'argo drive', cor: 'vermelho' });
+  assert.equal(os.clienteNome, 'José de Oliveira');
+  assert.equal(os.marca, 'Fiat');
+  assert.equal(os.modelo, 'Argo Drive');
+  assert.equal(os.cor, 'Vermelho');
+});
+
+test('validarNovaOS rejeita nome de cliente com números ou curto demais', () => {
+  assert.throws(() => validarNovaOS({ ...valido, clienteNome: 'Joao123' }), ValidationError);
+  assert.throws(() => validarNovaOS({ ...valido, clienteNome: 'J' }), ValidationError);
+  assert.throws(() => validarNovaOS({ ...valido, clienteNome: '---' }), ValidationError);
+});
+
+test('validarEdicaoOS valida só os campos enviados', () => {
+  assert.deepEqual(validarEdicaoOS({ modelo: 'uno mille', cor: 'branco' }), { modelo: 'Uno Mille', cor: 'Branco' });
+  assert.deepEqual(validarEdicaoOS({ clienteTelefone: '(21) 99999-0000' }), { clienteTelefone: '5521999990000' });
+  assert.throws(() => validarEdicaoOS({}), ValidationError);
+  assert.throws(() => validarEdicaoOS({ marca: '' }), ValidationError);
+  assert.throws(() => validarEdicaoOS({ placa: '123' }), ValidationError);
+  assert.throws(() => validarEdicaoOS({ status: 'ENTREGUE' }), /Dados da edição inválidos/);
 });

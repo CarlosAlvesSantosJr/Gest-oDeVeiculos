@@ -35,6 +35,7 @@ A atualização da OS, o histórico e o evento a publicar são gravados **na mes
 ```
                     exchange: oficina.eventos (topic, durável)
 os-service ──────►  routing keys: os.criada
+                                  os.dados.alterados   (edição de placa, marca, modelo, cliente...)
                                   os.status.AGUARDANDO_ORCAMENTO
                                   os.status.AGUARDANDO_PECA
                                   os.status.EM_ANDAMENTO
@@ -126,6 +127,7 @@ mensagem no log e em `GET /api/notificacoes`.
 | GET | `/api/ordens[?incluirEntregues=true]` | – | Lista OS |
 | GET | `/api/ordens/{id}` | – | Detalhe + histórico |
 | POST | `/api/ordens` | gerente | Entrada de veículo |
+| PATCH | `/api/ordens/{id}` | gerente | Edita dados: `placa`, `marca`, `modelo`, `cor`, `clienteNome`, `clienteTelefone`, `servico` |
 | PATCH | `/api/ordens/{id}/status` | gerente | `{ "status": "...", "observacao": "..." }` |
 | POST | `/api/auth/verificar` | gerente | 204 se o código for válido |
 | GET | `/api/status` | – | Status e rótulos |

@@ -1,6 +1,6 @@
 import express from 'express';
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { STATUS, STATUS_LABEL, STATUS_PAINEL, validarNovaOS } from './domain.js';
+import { STATUS, STATUS_LABEL, STATUS_PAINEL, validarEdicaoOS, validarNovaOS } from './domain.js';
 
 function tokensIguais(recebido, esperado) {
   const a = createHash('sha256').update(String(recebido)).digest();
@@ -56,6 +56,12 @@ export function criarApp({ repo, hub, managerToken, logger = console }) {
     const ordem = repo.criar(validarNovaOS(req.body));
     hub.emitir('ordem_criada', ordem);
     res.status(201).location(`/api/ordens/${ordem.id}`).json(ordem);
+  });
+
+  app.patch('/api/ordens/:id', exigirGerente, (req, res) => {
+    const { ordem, alterados } = repo.editar(req.params.id, validarEdicaoOS(req.body));
+    if (alterados.length) hub.emitir('ordem_atualizada', { ordem, statusAnterior: ordem.status, camposAlterados: alterados });
+    res.json({ ...ordem, camposAlterados: alterados });
   });
 
   app.patch('/api/ordens/:id/status', exigirGerente, (req, res) => {

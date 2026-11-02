@@ -33,7 +33,8 @@ before(async () => {
 test('painel central e app do gerente são servidos pelo gateway', async () => {
   const painel = await fetch(`${BASE}/`);
   assert.equal(painel.status, 200);
-  assert.match(await painel.text(), /Painel de controle dos serviços/);
+  assert.match(await painel.text(), /Auto Marcas · Painel/);
+  assert.equal((await fetch(`${BASE}/assets/logo-512.png`)).headers.get('content-type'), 'image/png');
   const gerente = await fetch(`${BASE}/gerente/`);
   assert.equal(gerente.status, 200);
   assert.match(await gerente.text(), /Acesso do gerente/);
@@ -65,11 +66,19 @@ test('fluxo completo: entrada -> peça -> andamento -> pronto (WhatsApp) -> entr
     headers: auth,
     body: JSON.stringify({
       placa: PLACA, marca: 'Renault', modelo: 'Kwid', cor: 'Branco',
-      clienteNome: 'Cliente E2E', clienteTelefone: '(11) 91234-5678', servico: 'Teste E2E',
+      clienteNome: 'MARIA DA SILVA TESTE', clienteTelefone: '(11) 91234-5678', servico: 'Teste E2E',
     }),
   });
   assert.equal(criar.status, 201);
   const os = await criar.json();
+  assert.equal(os.clienteNome, 'Maria da Silva Teste', 'nome com iniciais maiúsculas');
+
+  // Gerente corrige dados do veículo pela aba de edição
+  const edicao = await fetch(`${BASE}/api/ordens/${os.id}`, {
+    method: 'PATCH', headers: auth, body: JSON.stringify({ cor: 'prata', modelo: 'kwid zen' }),
+  });
+  assert.equal(edicao.status, 200);
+  assert.equal((await edicao.json()).modelo, 'Kwid Zen');
 
   // Sem token não altera
   const negado = await fetch(`${BASE}/api/ordens/${os.id}/status`, {
@@ -101,7 +110,7 @@ test('fluxo completo: entrada -> peça -> andamento -> pronto (WhatsApp) -> entr
   assert.equal(notificacoes.length, 1, 'apenas o status PRONTO_PARA_ENTREGA gera WhatsApp');
   assert.equal(notificacoes[0].status, 'ENVIADA');
   assert.equal(notificacoes[0].para, '5511912345678');
-  assert.match(notificacoes[0].texto, /Renault Kwid/);
+  assert.match(notificacoes[0].texto, /Renault Kwid Zen/, 'mensagem usa os dados editados');
   assert.match(notificacoes[0].texto, /PRONTO PARA ENTREGA/);
 
   // Entrega remove do painel

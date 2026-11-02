@@ -1,16 +1,20 @@
+/* Identidade visual: Mecânica Auto Marcas (preto, branco e vermelho) */
 :root {
-  --bg: #0f1419;
-  --bg-2: #161d25;
-  --card: #1d2631;
-  --card-borda: #2a3644;
-  --texto: #e8edf2;
-  --texto-2: #9aa8b6;
+  --bg: #0a0a0b;
+  --bg-2: #131315;
+  --card: #1b1b1e;
+  --card-borda: #2c2c31;
+  --texto: #f4f4f5;
+  --texto-2: #a1a1aa;
+  --marca: #e3141b;
+  --marca-forte: #b80f15;
   --orcamento: #f5b83d;
   --peca: #f0743e;
   --andamento: #4c9bf5;
   --pronto: #35c777;
-  --perigo: #ef5350;
+  --perigo: #ff4d4f;
   --raio: 14px;
+  --fonte-marca: 'Saira', 'Arial Narrow', system-ui, sans-serif;
   color-scheme: dark;
 }
 
@@ -28,6 +32,23 @@ button { font: inherit; cursor: pointer; }
 [data-status="AGUARDANDO_PECA"] { --cor: var(--peca); }
 [data-status="EM_ANDAMENTO"] { --cor: var(--andamento); }
 [data-status="PRONTO_PARA_ENTREGA"] { --cor: var(--pronto); }
+
+/* Marca da oficina (logo + nome no estilo do letreiro) */
+.marca-oficina { display: inline-flex; align-items: center; gap: 12px; }
+.marca-oficina img { border-radius: 50%; box-shadow: 0 0 0 2px #fff2; flex: none; }
+.marca-texto {
+  display: flex; flex-direction: column; line-height: .95;
+  font-family: var(--fonte-marca); font-style: italic; text-transform: uppercase;
+}
+.marca-texto small { font-size: 12px; font-weight: 700; letter-spacing: .08em; color: #fff; }
+.marca-texto b { font-size: 26px; font-weight: 900; letter-spacing: .01em; color: #fff; }
+.marca-texto em { color: var(--marca); font-style: italic; }
+
+/* Faixa inclinada vermelha e branca, como o traço do logo */
+.faixa-marca {
+  height: 6px;
+  background: linear-gradient(100deg, var(--marca) 0 62%, transparent 62% 63%, #fff 63% 100%);
+}
 
 /* Placa no padrão Mercosul */
 .placa {
