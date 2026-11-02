@@ -1,7 +1,10 @@
 // Provedores de envio de WhatsApp.
 //  - mock: registra a mensagem localmente (desenvolvimento/testes, sem custo).
 //  - cloud: WhatsApp Business Cloud API oficial da Meta (graph.facebook.com).
+//  - web: número da própria oficina conectado como aparelho vinculado (ver whatsapp-web.js).
 import { randomUUID } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+import { criarProvedorWhatsAppWeb } from './whatsapp-web.js';
 
 export class ErroWhatsApp extends Error {
   constructor(mensagem, { httpStatus = null, permanente = false } = {}) {
@@ -86,8 +89,18 @@ export function criarProvedorCloudApi({
   };
 }
 
-export function criarProvedor(env = process.env, { logger = console, fetchImpl } = {}) {
-  if ((env.WHATSAPP_PROVIDER ?? 'mock') === 'cloud') {
+export function criarProvedor(env = process.env, { logger = console, fetchImpl, baileys } = {}) {
+  const tipo = env.WHATSAPP_PROVIDER ?? 'mock';
+  if (tipo === 'web') {
+    return criarProvedorWhatsAppWeb({
+      pastaSessao: env.WHATSAPP_SESSAO_DIR || './data/whatsapp-sessao',
+      numeroPareamento: String(env.WHATSAPP_NUMERO_PAREAMENTO ?? '').replace(/\D/g, ''),
+      caminhoImagem: env.WHATSAPP_IMAGEM_PRONTO ?? fileURLToPath(new URL('../assets/veiculo-pronto.jpg', import.meta.url)),
+      logger,
+      baileys,
+    });
+  }
+  if (tipo === 'cloud') {
     return criarProvedorCloudApi({
       token: env.WHATSAPP_TOKEN,
       phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID,

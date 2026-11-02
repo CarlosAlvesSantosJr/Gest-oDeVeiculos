@@ -14,6 +14,7 @@ FROM base AS runtime
 RUN npm ci --omit=dev && npm cache clean --force \
     && mkdir -p /data && chown node:node /data
 COPY src ./src
+COPY assets ./assets
 USER node
 ENV PORT=3002 DB_PATH=/data/notificacoes.db
 VOLUME /data

@@ -73,7 +73,8 @@ test('fluxo completo: entrada -> peça -> andamento -> pronto (WhatsApp) -> entr
     headers: auth,
     body: JSON.stringify({
       placa: PLACA, marca: 'Renault', modelo: 'Kwid', cor: 'Branco',
-      clienteNome: 'MARIA DA SILVA TESTE', clienteTelefone: '(11) 91234-5678', servico: 'Teste E2E',
+      // Telefone com DDD 00 não existe: o teste nunca envia WhatsApp real para ninguém.
+      clienteNome: 'MARIA DA SILVA TESTE', clienteTelefone: '(00) 90000-0000', servico: 'Teste E2E',
     }),
   });
   assert.equal(criar.status, 201);
@@ -115,10 +116,11 @@ test('fluxo completo: entrada -> peça -> andamento -> pronto (WhatsApp) -> entr
     return lista.length ? lista : null;
   }, { descricao: 'WhatsApp de veículo pronto' });
   assert.equal(notificacoes.length, 1, 'apenas o status PRONTO_PARA_ENTREGA gera WhatsApp');
-  assert.equal(notificacoes[0].status, 'ENVIADA');
-  assert.equal(notificacoes[0].para, '5511912345678');
+  // ENVIADA no modo mock; com WhatsApp real o número fictício (DDD 00) não existe ou está fora da lista de permitidos.
+  assert.ok(['ENVIADA', 'NAO_PERMITIDO', 'FALHA'].includes(notificacoes[0].status), notificacoes[0].status);
+  assert.equal(notificacoes[0].para, '5500900000000');
   assert.match(notificacoes[0].texto, /Renault Kwid Zen/, 'mensagem usa os dados editados');
-  assert.match(notificacoes[0].texto, /PRONTO PARA ENTREGA/);
+  assert.match(notificacoes[0].texto, /pronto para retirada/);
 
   // Entrega remove do painel
   const entregue = await fetch(`${BASE}/api/ordens/${os.id}/status`, {

@@ -23,8 +23,9 @@ no celular** e **aviso automático por WhatsApp** quando o carro fica pronto.
 - **Nomes padronizados**: nomes próprios recebem iniciais maiúsculas automaticamente, no formulário e no servidor
   (`joão da silva` → `João da Silva`, `onix ltz` → `Onix LTZ`, `bmw` → `BMW`). Nome de cliente com números é recusado.
 - **Identidade visual** da Mecânica Auto Marcas (preto, branco e vermelho) no painel, no app e na mensagem do WhatsApp.
-- **WhatsApp automático**: ao marcar *Pronto para Entrega*, o cliente recebe uma mensagem pela
-  **WhatsApp Business Cloud API** (Meta). Em desenvolvimento, o modo `mock` registra a mensagem sem enviar.
+- **WhatsApp automático**: ao marcar *Pronto para Entrega*, o cliente recebe uma mensagem profissional com a
+  **logo da oficina**. Três modos: `web` (número da própria oficina conectado como aparelho vinculado),
+  `cloud` (WhatsApp Business Cloud API oficial da Meta) e `mock` (só registra, para desenvolvimento).
 - **Microsserviços + mensageria** com RabbitMQ, Transactional Outbox, idempotência, retentativa com backoff e DLQ.
 
 ## Arquitetura
@@ -72,14 +73,20 @@ docker compose up -d --build
 4. Para usar fora da oficina, publique com HTTPS (ex.: `cloudflared tunnel --url http://localhost:8080`).
 
 ### Ativar o WhatsApp real
-No `.env`, configure `WHATSAPP_PROVIDER=cloud`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` e, de preferência,
+**Pelo número da oficina (modo `web`):** no `.env` defina `WHATSAPP_PROVIDER=web` e `WHATSAPP_NUMERO_PAREAMENTO`,
+rode `docker compose up -d`, toque em **WhatsApp** no app do gerente e digite o código exibido em
+*WhatsApp → Aparelhos conectados → Conectar aparelho → Conectar com número de telefone*.
+
+<img src="services/notification-service/assets/veiculo-pronto.jpg" width="420" alt="Imagem enviada ao cliente">
+
+**Pela API oficial (modo `cloud`):** No `.env`, configure `WHATSAPP_PROVIDER=cloud`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` e, de preferência,
 `WHATSAPP_TEMPLATE_NAME` com um template aprovado. O passo a passo está em [docs/ARQUITETURA.md](docs/ARQUITETURA.md#whatsapp-business-cloud-api).
 
 ## Testes
 
 ```bash
 npm run install:all   # instala dependências dos dois serviços
-npm test              # 71 testes unitários/integração (domínio, repositório, outbox, API, SSE, WhatsApp, consumidor)
+npm test              # 79 testes unitários/integração (domínio, repositório, outbox, API, SSE, WhatsApp, consumidor)
 docker compose up -d --build
 npm run test:e2e      # teste ponta a ponta contra a stack no Docker (gateway → API → RabbitMQ → WhatsApp)
 ```

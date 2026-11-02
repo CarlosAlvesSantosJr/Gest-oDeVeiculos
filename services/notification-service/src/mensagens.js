@@ -11,9 +11,24 @@ function formatarPlaca(placa) {
 }
 
 const MODELOS = {
-  PRONTO_PARA_ENTREGA: ({ nome, veiculo, placa, oficina, horario }) =>
-    `Olá, ${nome}! ✅ Seu veículo ${veiculo}, placa ${placa}, está *PRONTO PARA ENTREGA* na ${oficina}.\n`
-    + `Pode retirar ${horario}. Obrigado pela confiança! 🚗`,
+  PRONTO_PARA_ENTREGA: ({ nome, veiculo, placa, servico, oficina, horario }) => [
+    `*${oficina.toUpperCase()}* 🔧`,
+    '',
+    `Olá, *${nome}*! Tudo bem?`,
+    '',
+    'Temos uma ótima notícia: o seu veículo está *pronto para retirada*. ✅',
+    '',
+    `🚗 *Veículo:* ${veiculo}`,
+    `🔖 *Placa:* ${placa}`,
+    ...(servico ? [`🛠️ *Serviço:* ${servico}`] : []),
+    '',
+    `🕗 *Retirada:* ${horario}.`,
+    '',
+    'Se tiver qualquer dúvida, é só responder esta mensagem.',
+    'Agradecemos a confiança!',
+    '',
+    `_Equipe ${oficina}_`,
+  ].join('\n'),
   AGUARDANDO_ORCAMENTO: ({ nome, veiculo, placa, oficina }) =>
     `Olá, ${nome}! Recebemos seu veículo ${veiculo}, placa ${placa}, na ${oficina}. `
     + 'Em breve enviaremos o orçamento.',
@@ -35,6 +50,7 @@ export function montarMensagem(dados, { oficina = 'nossa oficina', horario = 'em
     nome: primeiroNome(dados.clienteNome),
     veiculo: `${dados.marca} ${dados.modelo}`.trim(),
     placa: formatarPlaca(dados.placa),
+    servico: String(dados.servico ?? '').trim(),
     oficina,
     horario,
   };

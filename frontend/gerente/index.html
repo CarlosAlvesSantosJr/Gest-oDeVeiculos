@@ -24,7 +24,27 @@
     .topo .marca-texto small { font-size: 10px; }
     .topo .marca-texto b { font-size: 19px; }
     .topo-acoes { display: flex; align-items: center; gap: 4px; }
+    @media (max-width: 420px) { .topo-acoes .conexao { font-size: 0; gap: 0; padding: 0 4px; } }
     .sair { background: none; border: 0; color: var(--texto-2); font-size: 13px; padding: 6px; }
+    .btn-wpp {
+      display: inline-flex; align-items: center; gap: 6px; background: var(--card); color: var(--texto);
+      border: 1px solid var(--card-borda); border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 600;
+    }
+    .wpp-ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--texto-2); }
+    .wpp-ponto.ok { background: var(--pronto); }
+    .wpp-ponto.alerta { background: var(--orcamento); }
+    .wpp-ponto.erro { background: var(--perigo); }
+    .wpp-estado { display: flex; align-items: center; gap: 10px; padding: 14px; border-radius: 12px; background: var(--card); border: 1px solid var(--card-borda); margin-bottom: 14px; }
+    .wpp-estado strong { display: block; }
+    .wpp-estado small { color: var(--texto-2); }
+    .codigo-pareamento {
+      font: 800 34px/1.1 'Roboto Mono', ui-monospace, Consolas, monospace; letter-spacing: .12em; text-align: center;
+      background: #fff; color: #111; border-radius: 12px; padding: 14px; margin: 6px 0 14px;
+    }
+    .qr-wpp { display: block; width: 240px; height: 240px; margin: 0 auto 14px; border-radius: 12px; background: #fff; padding: 8px; }
+    .passos { margin: 0 0 14px; padding-left: 20px; color: var(--texto-2); font-size: 14px; display: grid; gap: 6px; }
+    .passos b { color: var(--texto); }
+    .secundario { width: 100%; padding: 13px; border-radius: 12px; border: 1px solid var(--card-borda); background: none; color: var(--texto); font-weight: 600; }
     .busca {
       width: 100%; margin-top: 10px; padding: 11px 14px; border-radius: 10px; border: 1px solid var(--card-borda);
       background: var(--card); color: var(--texto); font-size: 16px;
@@ -163,7 +183,8 @@
         <div class="topo-linha">
           <span id="marca"></span>
           <div class="topo-acoes">
-            <span id="conexao" class="conexao">Conectando…</span>
+            <button class="btn-wpp" id="btn-wpp" type="button" title="Conexão do WhatsApp"><span class="wpp-ponto" id="wpp-ponto"></span>WhatsApp</button>
+            <span id="conexao" class="conexao" title="Atualização em tempo real">Conectando…</span>
             <button class="sair" id="sair" type="button">Sair</button>
           </div>
         </div>
@@ -466,6 +487,68 @@
       });
     });
 
+    // ---------- Conexão do WhatsApp ----------
+    let timerWpp = null;
+
+    async function consultarWhatsApp() {
+      const s = await api('/api/whatsapp/status');
+      const ponto = $('wpp-ponto');
+      ponto.className = 'wpp-ponto';
+      if (s.estado === 'conectado') ponto.classList.add('ok');
+      else if (s.estado === 'aguardando_pareamento' || s.estado === 'iniciando') ponto.classList.add('alerta');
+      else ponto.classList.add('erro');
+      return s;
+    }
+
+    function renderizarWhatsApp(s) {
+      const alvo = $('conteudo-wpp');
+      if (!alvo) return;
+      if (s.provedor !== 'web') {
+        alvo.innerHTML = `<div class="wpp-estado"><span class="wpp-ponto ok"></span><div><strong>Provedor: ${esc(s.provedor)}</strong>
+          <small>${s.provedor === 'mock' ? 'Modo simulação: as mensagens são apenas registradas.' : 'API oficial da Meta configurada.'}</small></div></div>`;
+        return;
+      }
+      if (s.estado === 'conectado') {
+        alvo.innerHTML = `
+          <div class="wpp-estado"><span class="wpp-ponto ok"></span><div><strong>Conectado ✅</strong>
+            <small>Enviando pelo número ${esc(s.numero)}${s.comImagem ? ' · com a logo da oficina' : ''}</small></div></div>
+          <p class="sub">Quando um veículo for marcado como <b>Pronto para Entrega</b>, o cliente recebe a mensagem automaticamente.</p>
+          <button class="secundario" type="button" id="wpp-desconectar">Desconectar este número</button>`;
+        $('wpp-desconectar').onclick = async () => {
+          if (!confirm('Desconectar o WhatsApp da oficina? Os avisos automáticos param até um novo pareamento.')) return;
+          try { await api('/api/whatsapp/desconectar', { method: 'POST' }); toast('WhatsApp desconectado'); } catch (e) { toast(e.message, true); }
+        };
+        return;
+      }
+      if (s.estado === 'aguardando_pareamento') {
+        alvo.innerHTML = `
+          <div class="wpp-estado"><span class="wpp-ponto alerta"></span><div><strong>Aguardando conexão</strong>
+            <small>Conecte o WhatsApp da oficina como aparelho vinculado</small></div></div>
+          <ol class="passos">
+            <li>No celular da oficina, abra o <b>WhatsApp</b> → <b>⋮</b> → <b>Aparelhos conectados</b> → <b>Conectar aparelho</b>.</li>
+            <li>Toque em <b>Conectar com número de telefone</b> e digite o código abaixo:</li>
+          </ol>
+          ${s.codigoPareamento ? `<div class="codigo-pareamento">${esc(s.codigoPareamento)}</div>` : ''}
+          ${s.qr ? `<p class="sub" style="text-align:center">…ou abra esta tela no computador e escaneie o QR code com o celular:</p><img class="qr-wpp" src="${s.qr}" alt="QR code de pareamento">` : ''}`;
+        return;
+      }
+      alvo.innerHTML = `<div class="wpp-estado"><span class="wpp-ponto erro"></span><div><strong>${s.estado === 'iniciando' ? 'Iniciando…' : 'Reconectando…'}</strong>
+        <small>Aguarde alguns segundos</small></div></div>`;
+    }
+
+    function abrirWhatsApp() {
+      abrirFolha(`<h2 id="folha-titulo">WhatsApp da oficina</h2>
+        <p class="sub">Número usado para avisar os clientes</p><div id="conteudo-wpp"><p class="sub">Carregando…</p></div>`);
+      const atualizar = async () => {
+        if (!document.body.classList.contains('aberta') || !$('conteudo-wpp')) { clearInterval(timerWpp); return; }
+        try { renderizarWhatsApp(await consultarWhatsApp()); } catch (e) { $('conteudo-wpp').innerHTML = `<p class="erro">${esc(e.message)}</p>`; }
+      };
+      clearInterval(timerWpp);
+      atualizar();
+      timerWpp = setInterval(atualizar, 3000);
+    }
+    $('btn-wpp').addEventListener('click', abrirWhatsApp);
+
     function aplicar(ordem) {
       if (ordem.status === 'ENTREGUE') ordens.delete(ordem.id);
       else ordens.set(ordem.id, ordem);
@@ -478,6 +561,7 @@
       $('login').hidden = true;
       $('app').hidden = false;
       try { await carregar(); } catch (erro) { toast(erro.message, true); }
+      consultarWhatsApp().catch(() => {});
       pararEventos?.();
       pararEventos = assinarEventos({
         aoConectar() { $('conexao').textContent = 'Ao vivo'; $('conexao').classList.add('on'); carregar().catch(() => {}); },
@@ -486,6 +570,7 @@
       });
     }
     setInterval(() => { if (!$('app').hidden) renderizarLista(); }, 60 * 1000);
+    setInterval(() => { if (!$('app').hidden) consultarWhatsApp().catch(() => {}); }, 30 * 1000);
 
     if (token && await entrar(token)) iniciarApp();
     else $('login').hidden = false;

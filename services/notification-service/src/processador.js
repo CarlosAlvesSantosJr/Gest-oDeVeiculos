@@ -1,7 +1,11 @@
 import { montarMensagem } from './mensagens.js';
 
 // Decide se um evento gera WhatsApp, monta a mensagem e chama o provedor.
-export function criarProcessador({ provedor, registro, statusNotificaveis, oficina, horario, logger = console }) {
+// "permitidos": se informado, só esses números recebem mensagens (modo de teste seguro).
+export function criarProcessador({
+  provedor, registro, statusNotificaveis, oficina, horario, permitidos = [], logger = console,
+}) {
+  const listaPermitidos = new Set(permitidos);
   return async function processar(evento) {
     if (evento?.tipo !== 'OS_STATUS_ALTERADO') return { acao: 'ignorado', motivo: 'tipo de evento não notificável' };
     const dados = evento.dados ?? {};
@@ -18,6 +22,11 @@ export function criarProcessador({ provedor, registro, statusNotificaveis, ofici
     }
 
     const { texto, variaveis } = montarMensagem(dados, { oficina, horario });
+    if (listaPermitidos.size && !listaPermitidos.has(dados.clienteTelefone)) {
+      registro.registrar({ ...base, para: dados.clienteTelefone, texto, provedor: provedor.nome, status: 'NAO_PERMITIDO' });
+      logger.warn(`[notificacao] ${dados.clienteTelefone} fora da lista WHATSAPP_PERMITIDOS; mensagem não enviada`);
+      return { acao: 'ignorado', motivo: 'número fora da lista de permitidos' };
+    }
     try {
       const { id } = await provedor.enviar({ para: dados.clienteTelefone, texto, variaveis });
       registro.registrar({ ...base, para: dados.clienteTelefone, texto, provedor: provedor.nome, idProvedor: id, status: 'ENVIADA' });

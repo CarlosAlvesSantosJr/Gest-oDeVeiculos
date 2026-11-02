@@ -44,7 +44,7 @@ test('envia WhatsApp quando o veículo fica pronto para entrega', async () => {
   assert.equal(r.acao, 'enviado');
   assert.equal(enviadas.length, 1);
   assert.equal(enviadas[0].para, '5511999998888');
-  assert.match(enviadas[0].texto, /PRONTO PARA ENTREGA/);
+  assert.match(enviadas[0].texto, /pronto para retirada/);
   const [item] = registro.listar();
   assert.equal(item.status, 'ENVIADA');
   assert.equal(item.idProvedor, 'id-1');
@@ -82,6 +82,24 @@ test('falha no provedor é registrada, propagada e permite nova tentativa', asyn
   assert.equal(registro.listar()[0].status, 'FALHA');
   falhar = null;
   assert.equal((await processar(evento())).acao, 'enviado');
+});
+
+test('com lista de permitidos, só envia para os números da lista', async () => {
+  const restrito = criarProcessador({
+    provedor: { nome: 'teste', enviar: async (m) => { enviadas.push(m); return { id: 'x' }; } },
+    registro,
+    statusNotificaveis: ['PRONTO_PARA_ENTREGA'],
+    permitidos: ['5548999990000'],
+    logger: silencioso,
+  });
+  const bloqueado = await restrito(evento());
+  assert.equal(bloqueado.acao, 'ignorado');
+  assert.equal(registro.listar()[0].status, 'NAO_PERMITIDO');
+  assert.equal(enviadas.length, 0);
+
+  const liberado = await restrito(evento({ clienteTelefone: '5548999990000' }, 'ev-2'));
+  assert.equal(liberado.acao, 'enviado');
+  assert.equal(enviadas[0].para, '5548999990000');
 });
 
 test('registro filtra por placa', async () => {

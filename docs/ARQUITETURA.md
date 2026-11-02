@@ -119,6 +119,33 @@ Sem template configurado, o serviço envia mensagem de texto livre (funciona den
 ou com números de teste da Meta). Em desenvolvimento o provedor padrão é `mock`, que só registra a
 mensagem no log e em `GET /api/notificacoes`.
 
+### Provedor `web`: número da própria oficina
+
+Envia pelo WhatsApp que a oficina já usa, conectado como **aparelho vinculado** (como o WhatsApp Web),
+com a biblioteca [Baileys](https://github.com/WhiskeySockets/Baileys). A mensagem de "veículo pronto" vai
+como **imagem com a logo da oficina** ([assets/veiculo-pronto.jpg](../services/notification-service/assets/veiculo-pronto.jpg))
+e o texto formatado como legenda.
+
+> ⚠️ Não é a API oficial: o WhatsApp proíbe automação de contas comuns e pode bloquear o número em caso
+> de envios em massa. Para avisos individuais o risco é baixo; para operação em larga escala use o provedor `cloud`.
+
+```env
+WHATSAPP_PROVIDER=web
+WHATSAPP_NUMERO_PAREAMENTO=5548999999999   # número da oficina, com DDI 55
+WHATSAPP_PERMITIDOS=5548999999999          # modo de teste: só estes números recebem. Vazio = todos
+```
+
+Pareamento (uma única vez): no app do gerente toque em **WhatsApp**. A tela mostra um **código de
+pareamento** e um **QR code**. No celular da oficina: *WhatsApp → ⋮ → Aparelhos conectados → Conectar
+aparelho → Conectar com número de telefone* e digite o código (ou escaneie o QR exibido no computador).
+A sessão fica salva no volume `notification-data` e sobrevive a reinícios.
+
+Proteções:
+- **Lista de permitidos** (`WHATSAPP_PERMITIDOS`) para testar sem risco de enviar a clientes reais.
+- Número sem WhatsApp → erro permanente (DLQ), sem retentativas.
+- WhatsApp desconectado → retentativas com backoff (`MAX_TENTATIVAS=8`, `BACKOFF_MS=5000`, cerca de 10 min) e depois DLQ.
+- Se a sessão for encerrada pelo celular, o serviço apaga a sessão e volta a pedir pareamento.
+
 ## API REST (via gateway)
 
 | Método | Rota | Auth | Descrição |
@@ -133,6 +160,8 @@ mensagem no log e em `GET /api/notificacoes`.
 | GET | `/api/status` | – | Status e rótulos |
 | GET | `/api/eventos/stream` | – | Stream SSE em tempo real |
 | GET | `/api/notificacoes[?placa=]` | – | Auditoria dos WhatsApps enviados |
+| GET | `/api/whatsapp/status` | gerente | Estado da conexão, número, QR code e código de pareamento |
+| POST | `/api/whatsapp/desconectar` | gerente | Encerra a sessão do WhatsApp (pede novo pareamento) |
 
 Erros: `400` validação (com `detalhes`), `401` token, `404` OS inexistente, `409` placa já ativa ou transição inválida.
 

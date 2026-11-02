@@ -137,6 +137,7 @@ export function criarRepositorio(caminho = ':memory:', { agora = () => new Date(
         cor: ordem.cor,
         clienteNome: ordem.clienteNome,
         clienteTelefone: ordem.clienteTelefone,
+        servico: ordem.servico,
         statusAnterior: atual.status,
         statusNovo,
         observacao: obs,

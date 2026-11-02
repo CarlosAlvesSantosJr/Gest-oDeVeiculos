@@ -4,17 +4,26 @@ import { montarMensagem, statusSuportados } from '../src/mensagens.js';
 
 const dados = {
   statusNovo: 'PRONTO_PARA_ENTREGA', clienteNome: 'Diego Rocha Silva', marca: 'Toyota', modelo: 'Corolla', placa: 'MNO1234',
+  servico: 'Alinhamento e balanceamento',
 };
 
-test('mensagem de pronto para entrega cita primeiro nome, veículo, placa e oficina', () => {
-  const { texto, variaveis } = montarMensagem(dados, { oficina: 'Oficina do Zé', horario: 'até as 18h' });
-  assert.match(texto, /^Olá, Diego!/);
-  assert.match(texto, /Toyota Corolla/);
-  assert.match(texto, /MNO-1234/);
-  assert.match(texto, /PRONTO PARA ENTREGA/);
-  assert.match(texto, /Oficina do Zé/);
-  assert.match(texto, /até as 18h/);
-  assert.deepEqual(variaveis, ['Diego', 'Toyota Corolla', 'MNO-1234', 'Oficina do Zé']);
+test('mensagem de pronto para entrega é profissional e completa', () => {
+  const { texto, variaveis } = montarMensagem(dados, { oficina: 'Mecânica Auto Marcas', horario: 'de segunda a sexta, das 8h às 18h' });
+  const linhas = texto.split('\n');
+  assert.equal(linhas[0], '*MECÂNICA AUTO MARCAS* 🔧', 'cabeçalho com o nome da oficina');
+  assert.match(texto, /Olá, \*Diego\*!/);
+  assert.match(texto, /\*pronto para retirada\*/);
+  assert.match(texto, /🚗 \*Veículo:\* Toyota Corolla/);
+  assert.match(texto, /🔖 \*Placa:\* MNO-1234/);
+  assert.match(texto, /🛠️ \*Serviço:\* Alinhamento e balanceamento/);
+  assert.match(texto, /🕗 \*Retirada:\* de segunda a sexta, das 8h às 18h\./);
+  assert.equal(linhas.at(-1), '_Equipe Mecânica Auto Marcas_');
+  assert.deepEqual(variaveis, ['Diego', 'Toyota Corolla', 'MNO-1234', 'Mecânica Auto Marcas']);
+});
+
+test('linha de serviço é omitida quando não informado', () => {
+  const { texto } = montarMensagem({ ...dados, servico: '' });
+  assert.doesNotMatch(texto, /Serviço:/);
 });
 
 test('placa Mercosul é mantida sem hífen', () => {
