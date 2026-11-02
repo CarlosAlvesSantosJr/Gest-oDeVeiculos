@@ -4,19 +4,19 @@
 
 O sistema é dividido em **microsserviços independentes** que conversam por **REST** (síncrono, para
 comandos do usuário) e por **mensageria RabbitMQ** (assíncrono, para efeitos colaterais como o
-WhatsApp). Assim, se a Meta ou o serviço de notificação estiverem fora do ar, o gerente continua
+WhatsApp). Assim, se o WhatsApp ou o serviço de notificação estiverem fora do ar, o gerente continua
 atualizando os veículos normalmente e as mensagens são enviadas quando tudo voltar.
 
 | Serviço | Responsabilidade | Tecnologia | Porta interna |
 |---|---|---|---|
 | `gateway` | Ponto único de entrada: serve o painel e o app do gerente e faz proxy da API | nginx 1.27 | 80 (host 8080) |
 | `os-service` | Ordens de Serviço: cadastro, status, histórico, tempo real (SSE) e publicação de eventos | Node.js 24, Express, SQLite (`node:sqlite`) | 3001 |
-| `notification-service` | Consome eventos e envia WhatsApp ao cliente | Node.js 24, amqplib | 3002 |
+| `notification-service` | Consome eventos e envia WhatsApp ao cliente (número da oficina, Cloud API ou mock) | Node.js 24, amqplib, Baileys, SQLite | 3002 |
 | `rabbitmq` | Broker de mensagens | RabbitMQ 3.13 | 5672 / 15672 |
 
 Cada serviço tem **seus próprios dados** (o `os-service` é dono do banco de OS; o
 `notification-service` guarda só o registro dos envios, em SQLite no volume `notification-data`,
-que também serve para a idempotência sobreviver a reinícios) e pode ser implantado e escalado separadamente.
+que também serve para a idempotência sobreviver a reinícios, junto com a sessão do WhatsApp) e pode ser implantado e escalado separadamente.
 
 ## Padrões aplicados
 
@@ -59,7 +59,8 @@ Formato do evento (JSON, mensagem persistente, `messageId = eventId`):
   "ocorridoEm": "2026-11-02T14:03:11.204Z",
   "dados": {
     "osId": "…", "placa": "MNO7P89", "marca": "Toyota", "modelo": "Corolla XEi", "cor": "Preto",
-    "clienteNome": "Diego Rocha", "clienteTelefone": "5511987650004",
+    "clienteNome": "Diego Rocha", "clienteTelefone": "5500987650004",
+    "servico": "Alinhamento e balanceamento",
     "statusAnterior": "EM_ANDAMENTO", "statusNovo": "PRONTO_PARA_ENTREGA", "observacao": ""
   }
 }
@@ -67,8 +68,9 @@ Formato do evento (JSON, mensagem persistente, `messageId = eventId`):
 
 Garantias do consumidor:
 - **At-least-once + idempotência**: o `eventId` já processado é ignorado, então uma reentrega nunca manda WhatsApp duplicado.
-- **Retentativa com backoff exponencial** (2s, 4s, 8s, 16s) para erros temporários (HTTP 5xx, 429, falha de rede).
-- **Dead Letter Queue** para erros permanentes (número inválido, template inexistente, JSON corrompido) ou após `MAX_TENTATIVAS`.
+- **Retentativa com backoff exponencial** (`BACKOFF_MS=5000`: 5s, 10s, 20s… até `MAX_TENTATIVAS=8`, cerca de 10 min) para erros temporários (WhatsApp desconectado, HTTP 5xx, 429, falha de rede).
+- **Dead Letter Queue** para erros permanentes (número sem WhatsApp, template inexistente, JSON corrompido) ou após `MAX_TENTATIVAS`.
+- **Lista de permitidos** (`WHATSAPP_PERMITIDOS`) para homologar sem enviar a clientes reais; números com e sem o 9 são reconhecidos como iguais.
 - **Filtro configurável**: `NOTIFICAR_STATUS=PRONTO_PARA_ENTREGA` (padrão). Para avisar mais etapas, use por exemplo `AGUARDANDO_PECA,PRONTO_PARA_ENTREGA`; já existem mensagens para os 4 status.
 
 ### Tempo real (painel central ⇄ celular)
@@ -82,12 +84,14 @@ sozinho e, ao reconectar, recarrega o painel inteiro para não perder nada.
 
 ### Operação pelo celular do gerente
 `/gerente` é um **PWA** (pode ser instalado com "Adicionar à tela inicial") feito para telas pequenas:
-busca por placa, filtros por status, botões grandes para trocar o status, cadastro de entrada e
-confirmação de entrega. As operações de escrita exigem o **código de acesso do gerente**
+busca por placa, filtros por status, botões grandes para trocar o status, cadastro de entrada,
+edição dos dados do veículo, histórico, confirmação de entrega e a tela de conexão do WhatsApp da oficina. As operações de escrita exigem o **código de acesso do gerente**
 (`MANAGER_TOKEN`), enviado como `Authorization: Bearer`, com comparação em tempo constante.
 
 **Como acessar do celular:**
 1. Mesma rede Wi-Fi: descubra o IP do computador (`ipconfig`) e abra `http://<IP>:8080/gerente` no celular.
+   No Windows, libere a porta no firewall para a rede local (`New-NetFirewallRule ... -LocalPort 8080 -RemoteAddress LocalSubnet`).
+   O gateway usa `absolute_redirect off` para que `/gerente` → `/gerente/` preserve a porta publicada.
 2. Fora da oficina: publique o gateway com um túnel HTTPS (ex.: `cloudflared tunnel --url http://localhost:8080`)
    ou implante em um servidor com domínio e TLS.
 

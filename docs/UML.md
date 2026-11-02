@@ -9,7 +9,7 @@ flowchart LR
     G([👤 Gerente<br/>celular])
     M([👤 Mecânico / Recepção<br/>painel central])
     C([👤 Cliente])
-    W[[WhatsApp Business<br/>Cloud API]]
+    W[[WhatsApp<br/>número da oficina ou Cloud API]]
 
     subgraph Sistema de Gestão da Oficina
         UC1((Cadastrar entrada<br/>do veículo))
@@ -102,6 +102,12 @@ classDiagram
         +enviar(para, texto, variaveis) id
     }
     class ProvedorMock
+    class ProvedorWhatsAppWeb {
+        +String numeroPareamento
+        +Buffer imagemLogo
+        +status() EstadoConexao
+        +desconectar()
+    }
     class ProvedorCloudApi {
         +String phoneNumberId
         +String template
@@ -114,6 +120,7 @@ classDiagram
     EventoOutbox ..> Notificacao : consumido como
     ProvedorWhatsApp <|.. ProvedorMock
     ProvedorWhatsApp <|.. ProvedorCloudApi
+    ProvedorWhatsApp <|.. ProvedorWhatsAppWeb
     Notificacao ..> ProvedorWhatsApp : enviada por
 ```
 
@@ -151,7 +158,7 @@ sequenceDiagram
     participant R as Relay do Outbox
     participant MQ as RabbitMQ
     participant NS as notification-service
-    participant WA as WhatsApp Cloud API
+    participant WA as WhatsApp (número da oficina)
     participant P as Painel central
     actor C as Cliente
 
@@ -171,15 +178,15 @@ sequenceDiagram
     end
 
     MQ->>NS: entrega (fila notificacoes.whatsapp)
-    NS->>NS: idempotência (eventId) + monta mensagem
-    NS->>WA: POST /{phone-number-id}/messages
-    WA-->>NS: 200 {messages:[{id}]}
+    NS->>NS: idempotência (eventId), lista de permitidos e monta mensagem
+    NS->>WA: onWhatsApp(número) + envia imagem com logo e legenda
+    WA-->>NS: id da mensagem
     NS->>MQ: ack
-    WA-->>C: "Seu veículo ... está PRONTO PARA ENTREGA"
+    WA-->>C: imagem "Seu veículo está PRONTO!" + detalhes (veículo, placa, serviço, retirada)
 
     alt falha temporária (5xx, 429, rede)
         NS->>MQ: republica com x-tentativa+1 (backoff exponencial)
-    else falha permanente ou tentativas esgotadas
+    else número sem WhatsApp ou tentativas esgotadas
         NS->>MQ: nack → DLX → notificacoes.whatsapp.dlq
     end
 ```
@@ -197,11 +204,12 @@ flowchart TB
         GW[gateway<br/>nginx :80 → host :8080<br/>frontend estático + proxy]
         OS[os-service<br/>Node.js :3001<br/>REST + SSE + Outbox]
         NS[notification-service<br/>Node.js :3002<br/>consumidor + WhatsApp]
+        VOL2[(volume notification-data<br/>registro + sessão WhatsApp)]
         MQ[(rabbitmq<br/>exchange topic oficina.eventos<br/>DLX + DLQ)]
         VOL[(volume os-data<br/>SQLite)]
     end
 
-    META[[Meta WhatsApp<br/>Cloud API]]
+    META[[WhatsApp<br/>aparelho vinculado da oficina<br/>ou Meta Cloud API]]
 
     TV -- HTTP + SSE --> GW
     CEL -- HTTP + SSE --> GW
@@ -210,5 +218,6 @@ flowchart TB
     OS --- VOL
     OS -- publish os.* --> MQ
     MQ -- os.status.* --> NS
-    NS -- HTTPS --> META
+    NS --- VOL2
+    NS -- WebSocket/HTTPS --> META
 ```
