@@ -38,6 +38,13 @@ test('painel central e app do gerente são servidos pelo gateway', async () => {
   const gerente = await fetch(`${BASE}/gerente/`);
   assert.equal(gerente.status, 200);
   assert.match(await gerente.text(), /Acesso do gerente/);
+  // Sem a barra final, o redirecionamento deve manter host e porta (acesso pelo celular).
+  const semBarra = await fetch(`${BASE}/gerente`, { redirect: 'manual' });
+  assert.equal(semBarra.status, 301);
+  assert.equal(semBarra.headers.get('location'), '/gerente/');
+  const seguindo = await fetch(`${BASE}/gerente`);
+  assert.equal(seguindo.status, 200);
+  assert.equal(new URL(seguindo.url).port, new URL(BASE).port);
   const manifesto = await fetch(`${BASE}/gerente/manifest.webmanifest`);
   assert.equal((await manifesto.json()).start_url, '/gerente/');
 });
