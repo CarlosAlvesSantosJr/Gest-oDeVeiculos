@@ -61,7 +61,7 @@ export function placaValida(placa) {
 }
 
 // Converte telefone brasileiro para o formato E.164 sem "+" exigido pelo WhatsApp (ex.: 5511987654321).
-// Celular digitado sem o 9 inicial (8 dígitos começando em 6-9) recebe o 9: (48) 9162-4394 -> 5548991624394.
+// Celular digitado sem o 9 inicial (8 dígitos começando em 6-9) recebe o 9: (48) 9876-0000 -> 5548998760000.
 export function normalizarTelefone(telefone) {
   let digitos = String(telefone ?? '').replace(/\D/g, '');
   if (digitos.length === 10 || digitos.length === 11) digitos = `55${digitos}`;

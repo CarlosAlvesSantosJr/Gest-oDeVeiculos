@@ -1,6 +1,6 @@
 import { montarMensagem } from './mensagens.js';
 
-// Forma canônica de um celular brasileiro, com o 9 inicial: 554891624394 e 5548991624394 são o mesmo número.
+// Forma canônica de um celular brasileiro, com o 9 inicial: 554898760000 e 5548998760000 são o mesmo número.
 export function telefoneCanonico(numero) {
   const d = String(numero ?? '').replace(/\D/g, '');
   return d.length === 12 && d.startsWith('55') && /[6-9]/.test(d[4]) ? `${d.slice(0, 4)}9${d.slice(4)}` : d;

@@ -23,9 +23,9 @@ test('corrige maiúsculas de cadastros antigos e ignora os que já estão corret
 
 test('completa o 9 de celulares antigos gravados sem ele', () => {
   const repo = criarRepositorio(':memory:');
-  repo.criar({ ...base, clienteTelefone: '554891624394', marca: 'Fiat', modelo: 'Uno', cor: '', clienteNome: 'Ana' });
+  repo.criar({ ...base, clienteTelefone: '554898760000', marca: 'Fiat', modelo: 'Uno', cor: '', clienteNome: 'Ana' });
   assert.equal(normalizarCadastrosAtivos(repo, { logger: silencioso }), 1);
-  assert.equal(repo.listar()[0].clienteTelefone, '5548991624394');
+  assert.equal(repo.listar()[0].clienteTelefone, '5548998760000');
 });
 
 test('cadastro antigo inválido é mantido sem interromper os demais', () => {
